@@ -512,3 +512,8 @@ See the [`examples/`](./examples) directory:
 ## License
 
 MIT
+# Installation
+
+```bash
+npm install @telnyx/friction-sdk
+```
