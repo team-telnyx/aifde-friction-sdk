@@ -1,0 +1,83 @@
+version: 1.0.0
+
+required:
+  - skill
+  - team
+  - type
+  - severity
+  - message
+
+properties:
+  skill:
+    type: string
+    description: "Skill identifier (e.g., telnyx-webrtc-javascript)"
+    example: "telnyx-webrtc-javascript"
+
+  team:
+    type: string
+    enum: [webrtc, messaging, voice, numbers, ai, fax, iot, default]
+    description: "Product team responsible for the API"
+
+  language:
+    type: string
+    enum: [javascript, python, go, ruby, java]
+    default: javascript
+    description: "SDK language"
+
+  type:
+    type: string
+    enum: [parameter, api, docs, auth]
+    description: |
+      Friction category:
+      - parameter: Parameter naming/format mismatch
+      - api: API behavior differs from docs
+      - docs: Missing or unclear documentation
+      - auth: Authentication/authorization issue
+
+  severity:
+    type: string
+    enum: [blocker, major, minor]
+    description: |
+      Impact level:
+      - blocker: Completely blocks execution
+      - major: Requires workaround or multiple retries
+      - minor: Confusing but resolvable
+
+  message:
+    type: string
+    maxLength: 500
+    description: "Human-readable description of the friction"
+
+  context:
+    type: object
+    description: "Additional context (extensible)"
+    properties:
+      endpoint:
+        type: string
+        description: "API endpoint (e.g., POST /credentials)"
+      error_code:
+        type: string
+        description: "HTTP status or error code"
+      doc_url:
+        type: string
+        description: "Documentation URL"
+      attempted_param:
+        type: string
+      correct_param:
+        type: string
+
+  timestamp:
+    type: string
+    format: iso8601
+    description: "When friction occurred (auto-generated if not provided)"
+
+  agent:
+    type: object
+    description: "Agent execution metadata"
+    properties:
+      model:
+        type: string
+        example: "claude-sonnet-4-5"
+      execution_id:
+        type: string
+        example: "exec-abc123"

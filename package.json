@@ -1,0 +1,33 @@
+{
+  "name": "@telnyx/friction-sdk",
+  "version": "0.1.0",
+  "description": "SDK for reporting friction encountered when using Telnyx APIs from AI agents",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "telnyx",
+    "friction",
+    "reporting",
+    "ai",
+    "observability"
+  ],
+  "author": "Telnyx",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/team-telnyx/aifde-friction-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/team-telnyx/aifde-friction-sdk/issues"
+  },
+  "homepage": "https://developers.telnyx.com/docs/ai/friction-reporting"
+}
