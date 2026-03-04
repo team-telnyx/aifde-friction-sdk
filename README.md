@@ -2,6 +2,8 @@
 
 The **@telnyx/friction-sdk** enables AI agents to automatically report friction encountered when using Telnyx APIs. This helps identify documentation mismatches, parameter errors, and API behavior issues in real-time.
 
+**Now with OpenTelemetry integration** for automatic trace context propagation and structured logging.
+
 ## Overview
 
 **What is friction reporting?**
@@ -14,6 +16,12 @@ Friction reporting allows AI agents to notify Telnyx when they encounter issues 
 
 Reports are sent to Telnyx's observability infrastructure for analysis and resolution.
 
+**OpenTelemetry Integration:**
+- **Automatic trace ID generation**: Every friction report includes a unique trace ID
+- **Trace context propagation**: Links friction reports to distributed traces
+- **Structured logging**: Uses OTel Logs API for standardized log records
+- **W3C traceparent headers**: Propagates trace context across service boundaries
+
 ## Installation
 
 ```bash
@@ -25,14 +33,14 @@ npm install @telnyx/friction-sdk
 ```javascript
 const { FrictionReporter } = require('@telnyx/friction-sdk');
 
-// Initialize reporter
+// Initialize reporter (OpenTelemetry is initialized automatically)
 const friction = new FrictionReporter({
   skill: 'telnyx-webrtc-javascript',
   team: 'webrtc',
   apiKey: process.env.TELNYX_API_KEY  // Optional - defaults to env var
 });
 
-// Report friction
+// Report friction (trace ID generated automatically)
 await friction.report({
   type: 'parameter',
   severity: 'major',
@@ -43,7 +51,97 @@ await friction.report({
     correct_param: 'certificate'
   }
 });
+// Friction report now includes: trace_id, span_id, and OTel log record
 ```
+
+## OpenTelemetry Features
+
+### Automatic Trace Context
+
+Every friction report automatically includes trace context:
+
+```javascript
+{
+  "skill": "telnyx-webrtc-javascript",
+  "team": "webrtc",
+  "type": "parameter",
+  "severity": "major",
+  "message": "API parameter mismatch",
+  "trace": {
+    "trace_id": "0af7651916cd43dd8448eb211c80319c",  // ← Auto-generated
+    "span_id": "b7ad6b7169203331"                    // ← From active span (if available)
+  }
+}
+```
+
+**Benefits:**
+- **Correlation**: Link friction reports to distributed traces
+- **Debugging**: Track the full request flow that led to friction
+- **Analytics**: Group related friction reports by trace ID
+
+### Trace ID Generation
+
+The SDK automatically generates trace IDs:
+- **Active span exists**: Uses the trace ID from OpenTelemetry's active span
+- **No active span**: Generates a new random trace ID (32 hex characters)
+- **Always present**: Every friction report has a trace ID for tracking
+
+### W3C Traceparent Propagation
+
+When sending reports to the API, the SDK includes a `traceparent` header:
+
+```
+traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
+             └┬┘ └──────────────┬──────────────┘ └──────┬──────┘ └┬┘
+              │                 │                        │         │
+           version          trace-id                 span-id    flags
+```
+
+This enables trace context propagation across service boundaries.
+
+### Structured Logging via OTel
+
+The SDK emits structured log records using the OpenTelemetry Logs API:
+
+```javascript
+{
+  "severityNumber": 13,        // OTel severity (INFO/WARN/ERROR)
+  "severityText": "MAJOR",
+  "body": "API parameter mismatch",
+  "attributes": {
+    "friction.skill": "telnyx-webrtc-javascript",
+    "friction.team": "webrtc",
+    "friction.type": "parameter",
+    "friction.language": "javascript",
+    "trace.trace_id": "0af7651916cd43dd8448eb211c80319c",
+    "trace.span_id": "b7ad6b7169203331",
+    "friction.context.endpoint": "POST /mobile_push_credentials"
+  }
+}
+```
+
+**Severity Mapping:**
+- `minor` → `SeverityNumber.INFO` (9)
+- `major` → `SeverityNumber.WARN` (13)
+- `blocker` → `SeverityNumber.ERROR` (17)
+
+### Graceful Degradation
+
+OpenTelemetry integration is **non-blocking**:
+- OTel initialization failures are logged but don't break the SDK
+- Trace context generation always works (fallback to random IDs)
+- Existing HTTP POST functionality remains intact
+
+### Shutdown Handling
+
+For graceful application shutdown, call the shutdown method:
+
+```javascript
+// During application shutdown
+await FrictionReporter.shutdown();
+```
+
+This flushes any pending log records and cleanly shuts down the OTel SDK.
 
 ## When to Report
 
@@ -141,6 +239,10 @@ await friction.report({
     doc_url: 'https://developers.telnyx.com/docs/api/v2/webrtc/mobile-push-credentials'
   }
 });
+// Report payload automatically includes:
+// - trace.trace_id: Auto-generated trace ID
+// - trace.span_id: Current span ID (if available)
+// - timestamp: ISO 8601 timestamp
 ```
 
 **Avoid including:**
@@ -397,6 +499,24 @@ await reporter.report({
 
 **Note:** This method never throws. Errors are logged to console but don't block execution.
 
+**Automatic Enrichment:**
+- Adds `trace.trace_id` (auto-generated or from active span)
+- Adds `trace.span_id` (from active span if available)
+- Adds `timestamp` (ISO 8601 format)
+- Emits OpenTelemetry log record
+
+##### `shutdown()` (static)
+
+Gracefully shutdown the OpenTelemetry SDK.
+
+```javascript
+await FrictionReporter.shutdown();
+```
+
+**When to use:** Call during application shutdown to flush pending log records.
+
+**Returns:** Promise that resolves when shutdown is complete.
+
 ## Graceful Degradation
 
 The SDK operates in **graceful degradation mode** when no API key is configured:
@@ -460,6 +580,18 @@ Yes! If you have a Telnyx API key configured, friction reports help improve the 
 ### What happens if reporting fails?
 
 Nothing. The SDK uses **fire-and-forget** - errors are logged but never thrown. Your code continues normally.
+
+### Does OpenTelemetry add overhead?
+
+Minimal. OTel initialization happens once per process. Trace ID generation is fast (random hex). The SDK maintains fire-and-forget behavior.
+
+### Can I use my own OpenTelemetry setup?
+
+Yes! The SDK automatically detects active spans from your existing OTel instrumentation and uses their trace context.
+
+### What if OpenTelemetry initialization fails?
+
+The SDK gracefully degrades - trace IDs are still generated (random), and HTTP POST functionality remains intact. OTel errors never break your code.
 
 ## Troubleshooting
 
