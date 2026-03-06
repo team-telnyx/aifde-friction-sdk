@@ -10,7 +10,9 @@ const fetch = require('node-fetch');
 const yaml = require('js-yaml');
 const { validate, ValidationError } = require('./validator');
 
-const DEFAULT_ENDPOINT = 'https://api.telnyx.com/v2/friction';
+// Production endpoint (hardcoded)
+// Internal testing: Override with TELNYX_FRICTION_ENDPOINT env var
+const DEFAULT_ENDPOINT = process.env.TELNYX_FRICTION_ENDPOINT || 'https://api.telnyx.com/v2/friction';
 const DEFAULT_TIMEOUT = 5000; // 5 seconds
 const DEFAULT_LOG_DIR = path.join(os.homedir(), '.openclaw', 'friction-logs');
 
@@ -22,11 +24,10 @@ class FrictionReporter {
    * @param {string} options.team - Product team (webrtc, messaging, voice, etc.)
    * @param {string} [options.language='javascript'] - SDK language
    * @param {string} [options.apiKey=null] - Telnyx API key (defaults to TELNYX_API_KEY env var)
-   * @param {string} [options.endpoint=null] - Custom API endpoint (defaults to https://api.telnyx.com/v2/friction)
-   * @param {string} [options.mode='auto'] - Logging mode: 'local', 'remote', 'both', or 'auto'
-   * @param {string} [options.logDir=null] - Custom local log directory (defaults to ~/.openclaw/friction-logs)
+   * @param {string} [options.output='auto'] - Output mode: 'local', 'remote', 'both', or 'auto'
+   * @param {string} [options.localDir=null] - Custom local log directory (defaults to ~/.openclaw/friction-logs)
    */
-  constructor({ skill, team, language = 'javascript', apiKey = null, endpoint = null, mode = 'auto', logDir = null }) {
+  constructor({ skill, team, language = 'javascript', apiKey = null, output = 'auto', localDir = null }) {
     if (!skill) {
       throw new Error('skill is required');
     }
@@ -38,22 +39,22 @@ class FrictionReporter {
     this.team = team;
     this.language = language;
     this.apiKey = apiKey || process.env.TELNYX_API_KEY || null;
-    this.endpoint = endpoint || DEFAULT_ENDPOINT;
+    this.endpoint = DEFAULT_ENDPOINT;
     this.timeout = DEFAULT_TIMEOUT;
-    this.logDir = logDir || DEFAULT_LOG_DIR;
+    this.logDir = localDir || DEFAULT_LOG_DIR;
     
-    // Determine logging mode
-    if (mode === 'auto') {
+    // Determine output mode
+    if (output === 'auto') {
       // Auto mode: use remote if API key available, otherwise local
-      this.mode = this.apiKey ? 'remote' : 'local';
-    } else if (['local', 'remote', 'both'].includes(mode)) {
-      this.mode = mode;
+      this.output = this.apiKey ? 'remote' : 'local';
+    } else if (['local', 'remote', 'both'].includes(output)) {
+      this.output = output;
     } else {
-      throw new Error(`Invalid mode: ${mode}. Must be 'local', 'remote', 'both', or 'auto'`);
+      throw new Error(`Invalid output: ${output}. Must be 'local', 'remote', 'both', or 'auto'`);
     }
     
     // Ensure log directory exists (for local/both modes)
-    if (this.mode === 'local' || this.mode === 'both') {
+    if (this.output === 'local' || this.output === 'both') {
       try {
         fs.mkdirSync(this.logDir, { recursive: true });
       } catch (error) {
@@ -62,11 +63,11 @@ class FrictionReporter {
     }
     
     // Log initialization
-    const modeInfo = mode === 'auto' ? `${this.mode} (auto-detected)` : this.mode;
-    console.log(`[Friction SDK] Initialized - skill: ${skill}, team: ${team}, mode: ${modeInfo}`);
+    const outputInfo = output === 'auto' ? `${this.output} (auto-detected)` : this.output;
+    console.log(`[Friction SDK] Initialized - skill: ${skill}, team: ${team}, output: ${outputInfo}`);
     
-    if (this.mode === 'remote' && !this.apiKey) {
-      console.warn('[Friction SDK] Mode is "remote" but no API key configured - reports will fail');
+    if (this.output === 'remote' && !this.apiKey) {
+      console.warn('[Friction SDK] Output is "remote" but no API key configured - reports will fail');
     }
   }
 
@@ -99,17 +100,17 @@ class FrictionReporter {
       // Execute based on mode
       const results = {};
       
-      if (this.mode === 'local' || this.mode === 'both') {
+      if (this.output === 'local' || this.output === 'both') {
         results.local = await this._saveLocal(payload);
       }
       
-      if (this.mode === 'remote' || this.mode === 'both') {
+      if (this.output === 'remote' || this.output === 'both') {
         // Fire-and-forget for remote (don't block execution)
         this._sendRemote(payload).catch(error => {
           console.error('[Friction SDK] Failed to send report to remote:', error.message);
           
           // Fallback to local if remote fails in 'both' mode
-          if (this.mode === 'both') {
+          if (this.output === 'both') {
             console.log('[Friction SDK] Remote send failed - already saved locally');
           }
         });
@@ -214,7 +215,7 @@ class FrictionReporter {
    * @returns {string[]} Array of file paths
    */
   listLocalLogs() {
-    if (this.mode === 'remote') {
+    if (this.output === 'remote') {
       console.warn('[Friction SDK] Cannot list local logs in remote-only mode');
       return [];
     }
@@ -239,7 +240,7 @@ class FrictionReporter {
    * @returns {Object} Parsed friction report
    */
   readLocalLog(filepath) {
-    if (this.mode === 'remote') {
+    if (this.output === 'remote') {
       throw new Error('Cannot read local logs in remote-only mode');
     }
     
