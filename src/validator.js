@@ -83,7 +83,8 @@ function validate(payload) {
   }
   
   // Warn about potentially dangerous characters (backend will sanitize)
-  if (payload.message && /<script|<iframe|javascript:|on\w+=/i.test(payload.message)) {
+  // Fixed ReDoS: limit repetitions and make pattern more specific
+  if (payload.message && /<script|<iframe|javascript:|on[a-z]{1,20}=/i.test(payload.message)) {
     console.warn('[Friction SDK] Message contains potentially unsafe content - will be sanitized by backend');
   }
 
