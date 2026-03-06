@@ -76,8 +76,8 @@ function validate(payload) {
 
   if (!payload.message || typeof payload.message !== 'string') {
     errors.push('message is required and must be a string');
-  } else if (payload.message.length > 500) {
-    errors.push('message must be 500 characters or less');
+  } else if (payload.message.length > 200) {
+    errors.push('message must be 200 characters or less (keep it concise)');
   } else if (payload.message.trim() === '') {
     errors.push('message cannot be empty');
   }
@@ -96,16 +96,26 @@ function validate(payload) {
     if (typeof payload.context !== 'object' || payload.context === null || Array.isArray(payload.context)) {
       errors.push('context must be an object (not array or null)');
     } else {
-      // Check depth
+      // Check depth (max 2 levels for simple structure)
       const depth = getObjectDepth(payload.context);
-      if (depth > 3) {
-        errors.push('context object too deeply nested (max 3 levels)');
+      if (depth > 2) {
+        errors.push('context object too deeply nested (max 2 levels - keep it simple)');
       }
       
-      // Check key count
+      // Check key count (max 10 for conciseness)
       const keyCount = Object.keys(payload.context).length;
-      if (keyCount > 20) {
-        errors.push('context has too many keys (max 20)');
+      if (keyCount > 10) {
+        errors.push('context has too many keys (max 10 - focus on essential info)');
+      }
+      
+      // Check serialized size
+      try {
+        const contextSize = JSON.stringify(payload.context).length;
+        if (contextSize > 1024) {
+          errors.push('context object too large (max 1KB - keep it minimal)');
+        }
+      } catch (e) {
+        errors.push('context object cannot be serialized');
       }
     }
   }
