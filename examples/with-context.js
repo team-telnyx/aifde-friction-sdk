@@ -4,11 +4,12 @@
 
 const { FrictionReporter } = require('@telnyx/friction-sdk');
 
-// Initialize reporter
+// Initialize reporter with remote output
 const friction = new FrictionReporter({
   skill: 'telnyx-messaging-javascript',
   team: 'messaging',
   language: 'javascript',
+  output: 'remote',  // Explicitly use remote mode
   apiKey: process.env.TELNYX_API_KEY
 });
 
