@@ -3,11 +3,16 @@
  * SDK for reporting friction encountered when using Telnyx APIs from AI agents
  */
 
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const fetch = require('node-fetch');
+const yaml = require('js-yaml');
 const { validate, ValidationError } = require('./validator');
 
 const DEFAULT_ENDPOINT = 'https://api.telnyx.com/v2/friction';
 const DEFAULT_TIMEOUT = 5000; // 5 seconds
+const DEFAULT_LOG_DIR = path.join(os.homedir(), '.openclaw', 'friction-logs');
 
 class FrictionReporter {
   /**
@@ -18,8 +23,10 @@ class FrictionReporter {
    * @param {string} [options.language='javascript'] - SDK language
    * @param {string} [options.apiKey=null] - Telnyx API key (defaults to TELNYX_API_KEY env var)
    * @param {string} [options.endpoint=null] - Custom API endpoint (defaults to https://api.telnyx.com/v2/friction)
+   * @param {string} [options.mode='auto'] - Logging mode: 'local', 'remote', 'both', or 'auto'
+   * @param {string} [options.logDir=null] - Custom local log directory (defaults to ~/.openclaw/friction-logs)
    */
-  constructor({ skill, team, language = 'javascript', apiKey = null, endpoint = null }) {
+  constructor({ skill, team, language = 'javascript', apiKey = null, endpoint = null, mode = 'auto', logDir = null }) {
     if (!skill) {
       throw new Error('skill is required');
     }
@@ -33,10 +40,33 @@ class FrictionReporter {
     this.apiKey = apiKey || process.env.TELNYX_API_KEY || null;
     this.endpoint = endpoint || DEFAULT_ENDPOINT;
     this.timeout = DEFAULT_TIMEOUT;
-
-    // Warn if no API key (graceful degradation mode)
-    if (!this.apiKey) {
-      console.log('[Friction SDK] No API key configured - friction reports will be logged to console only');
+    this.logDir = logDir || DEFAULT_LOG_DIR;
+    
+    // Determine logging mode
+    if (mode === 'auto') {
+      // Auto mode: use remote if API key available, otherwise local
+      this.mode = this.apiKey ? 'remote' : 'local';
+    } else if (['local', 'remote', 'both'].includes(mode)) {
+      this.mode = mode;
+    } else {
+      throw new Error(`Invalid mode: ${mode}. Must be 'local', 'remote', 'both', or 'auto'`);
+    }
+    
+    // Ensure log directory exists (for local/both modes)
+    if (this.mode === 'local' || this.mode === 'both') {
+      try {
+        fs.mkdirSync(this.logDir, { recursive: true });
+      } catch (error) {
+        console.warn(`[Friction SDK] Could not create log directory: ${error.message}`);
+      }
+    }
+    
+    // Log initialization
+    const modeInfo = mode === 'auto' ? `${this.mode} (auto-detected)` : this.mode;
+    console.log(`[Friction SDK] Initialized - skill: ${skill}, team: ${team}, mode: ${modeInfo}`);
+    
+    if (this.mode === 'remote' && !this.apiKey) {
+      console.warn('[Friction SDK] Mode is "remote" but no API key configured - reports will fail');
     }
   }
 
@@ -47,7 +77,7 @@ class FrictionReporter {
    * @param {string} options.severity - Severity: blocker, major, or minor
    * @param {string} options.message - Human-readable description
    * @param {Object} [options.context={}] - Additional context (endpoint, error_code, etc.)
-   * @returns {Promise<void>} Resolves when report is sent (fire-and-forget)
+   * @returns {Promise<void>} Resolves when report is processed (fire-and-forget for remote)
    */
   async report({ type, severity, message, context = {} }) {
     try {
@@ -66,18 +96,27 @@ class FrictionReporter {
       // Validate schema
       this._validate(payload);
 
-      // If no API key, log to console only
-      if (!this.apiKey) {
-        this._logToConsole(payload);
-        return;
+      // Execute based on mode
+      const results = {};
+      
+      if (this.mode === 'local' || this.mode === 'both') {
+        results.local = await this._saveLocal(payload);
       }
-
-      // Send to API (fire-and-forget, don't block execution)
-      this._sendToAPI(payload).catch(error => {
-        // Errors are logged but don't throw (graceful degradation)
-        console.error('[Friction SDK] Failed to send report:', error.message);
-        this._logToConsole(payload);
-      });
+      
+      if (this.mode === 'remote' || this.mode === 'both') {
+        // Fire-and-forget for remote (don't block execution)
+        this._sendRemote(payload).catch(error => {
+          console.error('[Friction SDK] Failed to send report to remote:', error.message);
+          
+          // Fallback to local if remote fails in 'both' mode
+          if (this.mode === 'both') {
+            console.log('[Friction SDK] Remote send failed - already saved locally');
+          }
+        });
+        results.remote = 'sent (async)';
+      }
+      
+      return results;
 
     } catch (error) {
       // Validation errors are logged but don't throw
@@ -94,10 +133,46 @@ class FrictionReporter {
   }
 
   /**
-   * Send friction report to API
+   * Save friction report to local YAML file
    * @private
+   * @returns {Promise<string>} Path to saved file
    */
-  async _sendToAPI(payload) {
+  async _saveLocal(payload) {
+    try {
+      // Generate filename
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `friction-${timestamp}.yaml`;
+      const filepath = path.join(this.logDir, filename);
+      
+      // Convert to YAML
+      const yamlContent = yaml.dump(payload, {
+        indent: 2,
+        lineWidth: -1, // No line wrapping
+        noRefs: true
+      });
+      
+      // Write file
+      fs.writeFileSync(filepath, yamlContent, 'utf8');
+      
+      console.log(`[Friction SDK] Saved locally: ${filepath}`);
+      return filepath;
+      
+    } catch (error) {
+      console.error('[Friction SDK] Failed to save locally:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Send friction report to remote API
+   * @private
+   * @returns {Promise<Object>} API response
+   */
+  async _sendRemote(payload) {
+    if (!this.apiKey) {
+      throw new Error('No API key configured for remote reporting');
+    }
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -119,21 +194,62 @@ class FrictionReporter {
         throw new Error(`API returned ${response.status}: ${errorText}`);
       }
 
-      // Success - no need to process response (fire-and-forget)
-      return;
+      const result = await response.json();
+      console.log(`[Friction SDK] Sent to remote: ${result.data?.id || 'unknown'}`);
+      return result;
 
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        throw new Error(`Remote request timed out after ${this.timeout}ms`);
+      }
+      
       throw error;
     }
   }
 
   /**
-   * Log friction report to console (fallback mode)
-   * @private
+   * List local friction log files (only works in local/both modes)
+   * @returns {string[]} Array of file paths
    */
-  _logToConsole(payload) {
-    console.log('[Friction Report]', JSON.stringify(payload, null, 2));
+  listLocalLogs() {
+    if (this.mode === 'remote') {
+      console.warn('[Friction SDK] Cannot list local logs in remote-only mode');
+      return [];
+    }
+    
+    try {
+      const files = fs.readdirSync(this.logDir)
+        .filter(f => f.startsWith('friction-') && f.endsWith('.yaml'))
+        .map(f => path.join(this.logDir, f))
+        .sort()
+        .reverse(); // Most recent first
+      
+      return files;
+    } catch (error) {
+      console.error('[Friction SDK] Failed to list local logs:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Read a local friction log file (only works in local/both modes)
+   * @param {string} filepath - Path to the YAML file
+   * @returns {Object} Parsed friction report
+   */
+  readLocalLog(filepath) {
+    if (this.mode === 'remote') {
+      throw new Error('Cannot read local logs in remote-only mode');
+    }
+    
+    try {
+      const content = fs.readFileSync(filepath, 'utf8');
+      return yaml.load(content);
+    } catch (error) {
+      console.error('[Friction SDK] Failed to read local log:', error.message);
+      throw error;
+    }
   }
 }
 
