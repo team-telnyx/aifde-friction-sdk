@@ -16,6 +16,26 @@ const DEFAULT_ENDPOINT = process.env.TELNYX_FRICTION_ENDPOINT || 'https://api.te
 const DEFAULT_TIMEOUT = 5000; // 5 seconds
 const DEFAULT_LOG_DIR = path.join(os.homedir(), '.openclaw', 'friction-logs');
 
+/**
+ * Generate a random trace ID (32 hex characters)
+ * @private
+ */
+function generateTraceId() {
+  return Array.from({ length: 32 }, () => 
+    Math.floor(Math.random() * 16).toString(16)
+  ).join('');
+}
+
+/**
+ * Generate a random span ID (16 hex characters)
+ * @private
+ */
+function generateSpanId() {
+  return Array.from({ length: 16 }, () => 
+    Math.floor(Math.random() * 16).toString(16)
+  ).join('');
+}
+
 class FrictionReporter {
   /**
    * Create a new FrictionReporter instance
@@ -82,6 +102,10 @@ class FrictionReporter {
    */
   async report({ type, severity, message, context = {} }) {
     try {
+      // Generate trace context
+      const traceId = generateTraceId();
+      const spanId = generateSpanId();
+      
       // Build payload
       const payload = {
         skill: this.skill,
@@ -91,7 +115,11 @@ class FrictionReporter {
         severity,
         message,
         context,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        trace: {
+          trace_id: traceId,
+          span_id: spanId
+        }
       };
 
       // Validate schema
@@ -178,12 +206,22 @@ class FrictionReporter {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
+      // Build headers with trace context
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      };
+      
+      // Add W3C traceparent header if trace context exists
+      if (payload.trace) {
+        const { trace_id, span_id } = payload.trace;
+        // Format: version-trace_id-span_id-flags
+        headers['traceparent'] = `00-${trace_id}-${span_id}-01`;
+      }
+      
       const response = await fetch(this.endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
+        headers,
         body: JSON.stringify(payload),
         signal: controller.signal
       });
