@@ -15,6 +15,27 @@ class ValidationError extends Error {
 }
 
 /**
+ * Calculate object depth recursively
+ * @param {Object} obj - Object to measure
+ * @param {number} depth - Current depth
+ * @returns {number} Maximum depth
+ */
+function getObjectDepth(obj, depth = 1) {
+  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+    return depth;
+  }
+  
+  const depths = Object.values(obj).map(value => {
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return getObjectDepth(value, depth + 1);
+    }
+    return depth;
+  });
+  
+  return depths.length > 0 ? Math.max(...depths) : depth;
+}
+
+/**
  * Validate friction report payload
  * @param {Object} payload - The friction report payload
  * @throws {ValidationError} If validation fails
@@ -25,22 +46,30 @@ function validate(payload) {
   // Required fields
   if (!payload.skill || typeof payload.skill !== 'string') {
     errors.push('skill is required and must be a string');
+  } else if (payload.skill.trim() === '') {
+    errors.push('skill cannot be empty');
   }
 
   if (!payload.team || typeof payload.team !== 'string') {
     errors.push('team is required and must be a string');
+  } else if (payload.team.trim() === '') {
+    errors.push('team cannot be empty');
   } else if (!VALID_TEAMS.includes(payload.team)) {
     errors.push(`team must be one of: ${VALID_TEAMS.join(', ')}`);
   }
 
   if (!payload.type || typeof payload.type !== 'string') {
     errors.push('type is required and must be a string');
+  } else if (payload.type.trim() === '') {
+    errors.push('type cannot be empty');
   } else if (!VALID_TYPES.includes(payload.type)) {
     errors.push(`type must be one of: ${VALID_TYPES.join(', ')}`);
   }
 
   if (!payload.severity || typeof payload.severity !== 'string') {
     errors.push('severity is required and must be a string');
+  } else if (payload.severity.trim() === '') {
+    errors.push('severity cannot be empty');
   } else if (!VALID_SEVERITIES.includes(payload.severity)) {
     errors.push(`severity must be one of: ${VALID_SEVERITIES.join(', ')}`);
   }
@@ -49,6 +78,13 @@ function validate(payload) {
     errors.push('message is required and must be a string');
   } else if (payload.message.length > 500) {
     errors.push('message must be 500 characters or less');
+  } else if (payload.message.trim() === '') {
+    errors.push('message cannot be empty');
+  }
+  
+  // Warn about potentially dangerous characters (backend will sanitize)
+  if (payload.message && /<script|<iframe|javascript:|on\w+=/i.test(payload.message)) {
+    console.warn('[Friction SDK] Message contains potentially unsafe content - will be sanitized by backend');
   }
 
   // Optional fields
@@ -56,8 +92,22 @@ function validate(payload) {
     errors.push(`language must be one of: ${VALID_LANGUAGES.join(', ')}`);
   }
 
-  if (payload.context && typeof payload.context !== 'object') {
-    errors.push('context must be an object');
+  if (payload.context !== undefined) {
+    if (typeof payload.context !== 'object' || payload.context === null || Array.isArray(payload.context)) {
+      errors.push('context must be an object (not array or null)');
+    } else {
+      // Check depth
+      const depth = getObjectDepth(payload.context);
+      if (depth > 3) {
+        errors.push('context object too deeply nested (max 3 levels)');
+      }
+      
+      // Check key count
+      const keyCount = Object.keys(payload.context).length;
+      if (keyCount > 20) {
+        errors.push('context has too many keys (max 20)');
+      }
+    }
   }
 
   if (payload.agent && typeof payload.agent !== 'object') {
