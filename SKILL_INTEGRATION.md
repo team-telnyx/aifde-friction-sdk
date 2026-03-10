@@ -16,31 +16,67 @@ Add the following section at the **end** of your skill's `SKILL.md` file:
 
 ## Friction Reporting
 
-When you encounter issues during execution, report friction using the CLI.
+### Step 0: Install and learn friction-report (REQUIRED — do this BEFORE any operation)
 
-**Report friction for:**
-- API errors or unexpected behavior
-- Documentation inconsistencies (docs say X, API does Y)
-- Missing or unclear setup instructions
-- Configuration issues (missing env vars, unclear requirements)
-- Workarounds needed (had to do something not documented)
-- Parameter naming confusion
-- Unclear error messages
-
-**Important:** Only report friction that occurs **during skill execution** (when following this skill's instructions).
-
-### Installation
+**Install:**
 
 \`\`\`bash
 pip install git+https://github.com/team-telnyx/aifde-friction-sdk.git@feature/python-cli#subdirectory=python
 \`\`\`
 
-### Usage
+**Then read the full usage documentation:**
 
-Run \`friction-report\` with the required parameters. See full documentation:  
-📖 https://github.com/team-telnyx/aifde-friction-sdk/blob/feature/python-cli/python/README.md
+Fetch and read: https://github.com/team-telnyx/aifde-friction-sdk/blob/feature/python-cli/python/README.md
 
-Reports saved to: \`~/.openclaw/friction-logs/friction-*.yaml\`
+You MUST read this README to understand the available parameters and categories BEFORE proceeding. Do NOT guess the parameters — use what the README specifies.
+
+**If installation fails, STOP and tell the user.**
+
+---
+
+### During Execution
+
+When you encounter ANY issue during skill execution, you MUST:
+
+1. Run \`friction-report\` with the appropriate parameters (as documented in the README above) IMMEDIATELY
+2. THEN attempt to fix or work around the issue
+
+**Report friction for:**
+- Package installation failures
+- API errors (401, 403, 500, etc.)
+- SDK behavior not matching this skill's docs
+- Missing or unclear environment variables
+- Undocumented workarounds needed
+- Confusing parameter names
+- Unhelpful error messages
+
+**CRITICAL:** Report FIRST, fix SECOND. Do NOT skip this step. Do NOT wait for the user to ask.
+
+---
+
+### Post-Execution (MANDATORY — always run as your LAST step)
+
+This section is NON-OPTIONAL. The skill execution is NOT complete until every item below is done.
+
+**Friction Checklist**
+
+After finishing ANY operation from this skill, evaluate ALL categories below:
+
+- Package installation — did npm install telnyx work without issues?
+- Environment variables — was TELNYX_API_KEY set and valid?
+- API authentication — did authentication succeed on first try?
+- SDK method behavior — did methods work as documented in this skill?
+- Error messages — were error messages clear and actionable?
+- Parameter naming — were parameter names intuitive and consistent with docs?
+- Documentation accuracy — did this skill's examples match actual SDK behavior?
+
+**Reporting**
+
+1. For each category marked as friction-found, run \`friction-report\` with the appropriate parameters (as documented in the README from Step 0)
+2. If ALL categories are ok, explicitly state: "No friction encountered during this execution"
+3. List a summary of all steps attempted and their outcomes
+
+**CRITICAL:** Do NOT tell the user the task is complete until this checklist is fully evaluated and all friction reports are submitted.
 ```
 
 ---
