@@ -20,108 +20,18 @@ When you encounter issues during execution, report friction using the \`@telnyx/
 
 ### Installation
 
-Install the SDK from GitHub (not yet published to npm):
+Install the SDK from GitHub:
 
 \`\`\`bash
 npm install github:team-telnyx/aifde-friction-sdk
 \`\`\`
 
-### Setup
-
-Initialize the reporter at the start of your script:
-
-\`\`\`javascript
-const { FrictionReporter } = require('@telnyx/friction-sdk');
-
-const friction = new FrictionReporter({
-  skill: 'SKILL_NAME_HERE',  // e.g., 'telnyx-webrtc-javascript'
-  team: 'TEAM_NAME_HERE',    // e.g., 'webrtc'
-  language: 'javascript'     // or 'python', 'go', etc.
-});
-\`\`\`
-
-### When to Report
-
-**Report friction for:**
-- ❌ API errors or unexpected behavior
-- ❌ Documentation inconsistencies (docs say X, API does Y)
-- ❌ Missing or unclear setup instructions
-- ❌ Configuration issues (missing env vars, unclear requirements)
-- ❌ Workarounds needed (had to do something not documented)
-- ❌ Parameter naming confusion
-- ❌ Unclear error messages
-
-**Important:** Only report friction that occurs **during skill execution** (when following this skill's instructions).
-
 ### Usage
 
-Report friction when you encounter issues:
+Follow the complete guide for setup, examples, and best practices:  
+📖 https://github.com/team-telnyx/aifde-friction-sdk#readme
 
-\`\`\`javascript
-await friction.report({
-  type: 'parameter',           // 'auth', 'parameter', 'docs', 'config', 'error'
-  severity: 'major',           // 'blocker', 'major', 'minor'
-  message: 'API expects "certificate" but docs say "cert"',
-  context: {
-    endpoint: 'POST /v2/mobile_push_credentials',
-    attempted_param: 'cert',
-    correct_param: 'certificate',
-    error_code: '422',
-    doc_url: 'https://developers.telnyx.com/...'
-  }
-});
-\`\`\`
-
-### Full Example
-
-\`\`\`javascript
-const { FrictionReporter } = require('@telnyx/friction-sdk');
-const Telnyx = require('telnyx');
-
-// 1. Initialize friction reporter
-const friction = new FrictionReporter({
-  skill: 'telnyx-webrtc-javascript',
-  team: 'webrtc',
-  language: 'javascript'
-});
-
-// 2. Initialize Telnyx client
-const client = new Telnyx({ apiKey: process.env.TELNYX_API_KEY });
-
-// 3. Try API operation
-try {
-  const credential = await client.telephonyCredentials.create({
-    connection_id: '1234567890'  // From docs
-  });
-} catch (error) {
-  // 4. Report friction when docs don't match reality
-  await friction.report({
-    type: 'parameter',
-    severity: 'major',
-    message: 'Documentation shows example connection_id that doesn\\'t work',
-    context: {
-      endpoint: 'POST /telephony_credentials',
-      error: error.message,
-      doc_url: 'https://github.com/...',
-      time_spent_seconds: 300  // ~5 minutes debugging
-    }
-  });
-  
-  // 5. Find workaround and continue...
-}
-\`\`\`
-
-### Output
-
-Reports are saved to:
-- **Local mode:** \`~/.openclaw/friction-logs/friction-*.yaml\`
-- **Remote mode:** Sent to Telnyx backend (requires API key)
-
-Default is **auto mode**: saves locally, sends to backend if API key is available.
-
-### Learn More
-
-📖 **Full documentation:** https://github.com/team-telnyx/aifde-friction-sdk#readme
+Reports are saved to \`~/.openclaw/friction-logs/friction-*.yaml\`
 ```
 
 ---
