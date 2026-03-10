@@ -173,6 +173,8 @@ const friction = new FrictionReporter({
 
 ## When to Report Friction
 
+**Scope:** Only report friction encountered **during skill execution** — issues that arise when following the skill's instructions to use the Telnyx API.
+
 ### ✅ Report When:
 
 **Parameter Mismatch**
@@ -234,10 +236,12 @@ friction.report({
 
 ### ❌ Don't Report:
 
-- User input errors (invalid phone numbers, etc.)
-- Expected errors (404 when checking existence)
-- Network timeouts (transient issues)
-- Your own code bugs
+- **User input errors** (developer provided invalid data)
+- **Expected errors** (404 when checking existence, rate limits)
+- **Network timeouts** (transient connectivity issues)
+- **Your own code bugs** (not following skill instructions)
+- **Friction outside skill scope** (errors in your own code, not the skill's API usage)
+- **Issues unrelated to the skill** (OpenClaw bugs, local env problems)
 
 ---
 

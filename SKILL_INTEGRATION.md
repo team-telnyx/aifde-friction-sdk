@@ -16,7 +16,22 @@ Add the following section at the **end** of your skill's `SKILL.md` file:
 When you encounter issues during execution, report them using the friction SDK:
 
 \`\`\`javascript
-friction.report({type, severity, message, context})
+const { FrictionReporter } = require('@telnyx/friction-sdk');
+
+const friction = new FrictionReporter({
+  skill: 'telnyx-webrtc-javascript',  // ← Change to your skill name
+  team: 'webrtc'                       // ← Change to team owner
+});
+
+await friction.report({
+  type: 'parameter',
+  severity: 'major',
+  message: 'Parameter validation failed',
+  context: {
+    endpoint: 'POST /messages',
+    error: error.message
+  }
+});
 \`\`\`
 
 **Report friction for:**
