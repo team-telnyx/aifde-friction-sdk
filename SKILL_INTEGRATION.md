@@ -16,22 +16,41 @@ Add the following section at the **end** of your skill's `SKILL.md` file:
 
 ## Friction Reporting
 
-When you encounter issues during execution, report friction using the \`@telnyx/friction-sdk\`.
+When you encounter issues during execution, report friction by creating a YAML file.
 
-### Installation
+### How to Report
 
-Install the SDK from GitHub:
+Create a YAML file in \`~/.openclaw/friction-logs/\` with this structure:
+
+\`\`\`yaml
+skill: SKILL_NAME        # e.g., 'telnyx-webrtc-python'
+team: TEAM_NAME          # e.g., 'webrtc'
+language: LANGUAGE       # e.g., 'python'
+type: TYPE               # 'parameter', 'api', 'docs', 'auth'
+severity: SEVERITY       # 'blocker', 'major', 'minor'
+message: "Brief description of the issue"
+context:
+  endpoint: "API endpoint"
+  error: "Error message"
+  doc_url: "https://..."
+timestamp: "2026-03-10T18:30:00Z"
+\`\`\`
+
+**Filename format:** \`friction-YYYY-MM-DDTHH-MM-SS-SSSZ.yaml\`
+
+### JavaScript (Optional SDK)
+
+For JavaScript skills, you can optionally use the SDK:
 
 \`\`\`bash
 npm install github:team-telnyx/aifde-friction-sdk
 \`\`\`
 
-### Usage
+Then follow: https://github.com/team-telnyx/aifde-friction-sdk#readme
 
-Follow the complete guide for setup, examples, and best practices:  
-📖 https://github.com/team-telnyx/aifde-friction-sdk#readme
+### Learn More
 
-Reports are saved to \`~/.openclaw/friction-logs/friction-*.yaml\`
+📖 **Schema & examples:** https://github.com/team-telnyx/aifde-friction-sdk/blob/main/schema/friction-schema.yaml
 ```
 
 ---
