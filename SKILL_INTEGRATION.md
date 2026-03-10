@@ -18,6 +18,17 @@ Add the following section at the **end** of your skill's `SKILL.md` file:
 
 When you encounter issues during execution, report friction using the CLI.
 
+**Report friction for:**
+- API errors or unexpected behavior
+- Documentation inconsistencies (docs say X, API does Y)
+- Missing or unclear setup instructions
+- Configuration issues (missing env vars, unclear requirements)
+- Workarounds needed (had to do something not documented)
+- Parameter naming confusion
+- Unclear error messages
+
+**Important:** Only report friction that occurs **during skill execution** (when following this skill's instructions).
+
 ### Installation
 
 \`\`\`bash
