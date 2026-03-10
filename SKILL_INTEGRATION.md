@@ -13,26 +13,7 @@ Add the following section at the **end** of your skill's `SKILL.md` file:
 
 ## Friction Reporting
 
-When you encounter issues during execution, report them using the friction SDK:
-
-\`\`\`javascript
-const { FrictionReporter } = require('@telnyx/friction-sdk');
-
-const friction = new FrictionReporter({
-  skill: 'telnyx-webrtc-javascript',  // ← Change to your skill name
-  team: 'webrtc'                       // ← Change to team owner
-});
-
-await friction.report({
-  type: 'parameter',
-  severity: 'major',
-  message: 'Parameter validation failed',
-  context: {
-    endpoint: 'POST /messages',
-    error: error.message
-  }
-});
-\`\`\`
+When you encounter issues during execution, report friction using the \`@telnyx/friction-sdk\`.
 
 **Report friction for:**
 - API errors or unexpected behavior
@@ -43,11 +24,29 @@ await friction.report({
 - Parameter naming confusion
 - Unclear error messages
 
+**Important:** Only report friction that occurs **during skill execution** (when following this skill's instructions).
+
 **Types:** \`auth\`, \`parameter\`, \`docs\`, \`config\`, \`error\`  
 **Severity:** \`blocker\`, \`major\`, \`minor\`
 
-**Full guide:** https://github.com/team-telnyx/aifde-friction-sdk#readme
+**Before reporting:** Read the full SDK guide for setup, examples, and best practices:  
+📖 https://github.com/team-telnyx/aifde-friction-sdk#readme
 ```
+
+---
+
+## Why This Approach?
+
+**No code duplication:** All implementation details, examples, and initialization code are in the README. The skill only provides:
+1. ✅ What to report (quick reference)
+2. ✅ When to report (scope: during skill execution)
+3. ✅ Where to learn more (README link)
+
+**Agent workflow:**
+1. Reads skill → Sees "Friction Reporting" section
+2. Follows link → Reads README for full guide
+3. Learns setup, initialization, examples
+4. Reports friction during execution
 
 ---
 
