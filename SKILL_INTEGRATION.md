@@ -20,46 +20,16 @@ When you encounter issues during execution, report friction using the CLI.
 
 ### Installation
 
-Install the friction reporting CLI:
-
 \`\`\`bash
 pip install git+https://github.com/team-telnyx/aifde-friction-sdk.git@feature/python-cli#subdirectory=python
 \`\`\`
 
 ### Usage
 
-Report friction by running:
-
-\`\`\`bash
-friction-report \\
-  --skill SKILL_NAME \\
-  --team TEAM_NAME \\
-  --type TYPE \\
-  --severity SEVERITY \\
-  --message "Brief description" \\
-  --context '{"endpoint":"...","error":"..."}'
-\`\`\`
-
-**Example:**
-
-\`\`\`bash
-friction-report \\
-  --skill telnyx-webrtc-python \\
-  --team webrtc \\
-  --language python \\
-  --type parameter \\
-  --severity major \\
-  --message "API expects 'certificate' but docs say 'cert'" \\
-  --context '{"endpoint":"POST /v2/credentials","error":"422"}'
-\`\`\`
-
-### Output
+Run \`friction-report\` with the required parameters. See full documentation:  
+📖 https://github.com/team-telnyx/aifde-friction-sdk/blob/feature/python-cli/python/README.md
 
 Reports saved to: \`~/.openclaw/friction-logs/friction-*.yaml\`
-
-### Learn More
-
-📖 **CLI documentation:** https://github.com/team-telnyx/aifde-friction-sdk/blob/feature/python-cli/python/README.md
 ```
 
 ---
