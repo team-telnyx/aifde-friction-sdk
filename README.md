@@ -295,6 +295,56 @@ friction.report({
 
 ---
 
+## Validation & Limits
+
+The SDK enforces strict limits to ensure concise, actionable reports:
+
+| Field | Limit | Why |
+|-------|-------|-----|
+| `message` | 200 chars max | "Think tweet, not essay" |
+| `context` depth | 2 levels max | Keep structure simple |
+| `context` keys | 10 max | Focus on essential info |
+| `context` size | 1KB max | Prevent large payloads |
+
+**Security:**
+- Warns on XSS patterns (`<script>`, `javascript:`, `onerror=`)
+- Validates all required fields
+- Strict type checking
+
+**Validation behavior:**
+- Validation failures throw `ValidationError` with clear messages
+- Remote failures are logged but never thrown (fire-and-forget)
+
+**Example validation error:**
+```javascript
+// Message too long
+await friction.report({
+  type: 'api',
+  severity: 'major',
+  message: 'This is a very long message that exceeds the 200 character limit and will be rejected by the validator because we want to keep friction reports concise and focused on the core issue without unnecessary details'
+});
+// Error: ValidationError: message must be 200 characters or less (keep it concise)
+```
+
+**Testing override:**
+
+For internal testing, you can override the backend endpoint:
+
+```javascript
+// Override endpoint before initializing reporter
+process.env.TELNYX_FRICTION_ENDPOINT = 'http://localhost:3000/v2/friction';
+
+const friction = new FrictionReporter({
+  skill: 'test-skill',
+  team: 'webrtc',
+  output: 'remote'
+});
+
+// Now reports will be sent to localhost instead of production
+```
+
+---
+
 ## Examples
 
 ### Example 1: Parameter Mismatch
