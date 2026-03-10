@@ -4,22 +4,29 @@
 
 const { FrictionReporter } = require('@telnyx/friction-sdk');
 
-// Initialize reporter
+// Initialize reporter (auto mode - uses remote if API key available, otherwise local)
 const friction = new FrictionReporter({
-  skill: 'telnyx-webrtc-javascript',
+  skill: 'my-skill',
   team: 'webrtc',
-  apiKey: process.env.TELNYX_API_KEY
+  language: 'javascript'
+  // output: 'auto' (default)
+  // apiKey: process.env.TELNYX_API_KEY (default)
 });
 
-// Report a simple friction
+// Report friction
 async function example() {
   await friction.report({
     type: 'parameter',
     severity: 'major',
-    message: 'API expects "certificate" but documentation says "cert"'
+    message: 'API expects "certificate" but documentation says "cert"',
+    context: {
+      endpoint: 'POST /v2/mobile_push_credentials',
+      attempted_param: 'cert',
+      correct_param: 'certificate'
+    }
   });
 
-  console.log('Friction reported!');
+  console.log('Friction report sent!');
 }
 
 example();

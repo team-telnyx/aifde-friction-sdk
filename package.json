@@ -16,7 +16,8 @@
   "author": "Telnyx",
   "license": "MIT",
   "dependencies": {
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {},
   "engines": {

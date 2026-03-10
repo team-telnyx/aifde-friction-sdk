@@ -1,0 +1,223 @@
+# Skill Integration Guide
+
+How to add Friction Reporting to Telnyx API skills (SKILL.md files).
+
+---
+
+## Friction Reporting Section Template
+
+Add the following section at the **end** of your skill's `SKILL.md` file:
+
+```markdown
+---
+
+## Friction Reporting
+
+When you encounter issues during execution, report friction using the \`@telnyx/friction-sdk\`.
+
+**Report friction for:**
+- API errors or unexpected behavior
+- Documentation inconsistencies (docs say X, API does Y)
+- Missing or unclear setup instructions
+- Configuration issues (missing env vars, unclear requirements)
+- Workarounds needed (had to do something not documented)
+- Parameter naming confusion
+- Unclear error messages
+
+**Important:** Only report friction that occurs **during skill execution** (when following this skill's instructions).
+
+**Types:** \`auth\`, \`parameter\`, \`docs\`, \`config\`, \`error\`  
+**Severity:** \`blocker\`, \`major\`, \`minor\`
+
+**Before reporting:** Read the full SDK guide for setup, examples, and best practices:  
+📖 https://github.com/team-telnyx/aifde-friction-sdk#readme
+```
+
+---
+
+## Why This Approach?
+
+**No code duplication:** All implementation details, examples, and initialization code are in the README. The skill only provides:
+1. ✅ What to report (quick reference)
+2. ✅ When to report (scope: during skill execution)
+3. ✅ Where to learn more (README link)
+
+**Agent workflow:**
+1. Reads skill → Sees "Friction Reporting" section
+2. Follows link → Reads README for full guide
+3. Learns setup, initialization, examples
+4. Reports friction during execution
+
+---
+
+## What This Captures
+
+This section guides AI agents to report:
+
+### 1. **API Failures** (Traditional Errors)
+```javascript
+friction.report({
+  type: 'auth',
+  severity: 'blocker',
+  message: 'Authentication failed: invalid API key',
+  context: {
+    endpoint: 'POST /messages',
+    error: '401 Unauthorized',
+  },
+});
+```
+
+### 2. **Documentation Gaps**
+```javascript
+friction.report({
+  type: 'docs',
+  severity: 'major',
+  message: 'Skill lacks prerequisite: valid Telnyx phone number required',
+  context: {
+    skill: 'telnyx-messaging-javascript',
+    missing_doc: 'No mention of needing to own a phone number',
+    error_encountered: '400 Invalid source number',
+  },
+});
+```
+
+### 3. **Config Friction**
+```javascript
+friction.report({
+  type: 'config',
+  severity: 'major',
+  message: 'Environment variable format not documented',
+  context: {
+    env_var: 'TELNYX_API_KEY',
+    missing_info: 'No example of valid format',
+  },
+});
+```
+
+### 4. **Workarounds**
+```javascript
+friction.report({
+  type: 'docs',
+  severity: 'major',
+  message: 'Had to search external docs for connection_id format',
+  context: {
+    skill: 'telnyx-webrtc-javascript',
+    missing: 'Connection ID format not documented in skill',
+    workaround: 'Had to check Telnyx portal to find valid format',
+  },
+});
+```
+
+### 5. **Documentation Inconsistencies**
+```javascript
+friction.report({
+  type: 'docs',
+  severity: 'major',
+  message: 'Parameter name mismatch: docs say "cert", SDK expects "certificate"',
+  context: {
+    endpoint: 'POST /mobile_push_credentials',
+    docs_say: 'cert',
+    sdk_expects: 'certificate',
+  },
+});
+```
+
+---
+
+## Integration Steps
+
+### Step 1: Add Section to SKILL.md
+
+Copy the template above and paste it at the end of your skill's `SKILL.md` file.
+
+### Step 2: Test
+
+The agent will automatically:
+1. Read the "Friction Reporting" section when loading the skill
+2. Fetch this SDK's README via `web_fetch()` for detailed guidelines
+3. Report friction whenever encountered during execution
+
+### Step 3: Verify
+
+Check that friction reports are generated in:
+- **Local mode:** `~/.openclaw/friction-logs/friction-*.yaml`
+- **Remote mode:** Telnyx backend (`POST /v2/friction`)
+
+---
+
+## Friction Types Reference
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `auth` | Authentication/authorization issues | Invalid API key, permission denied |
+| `parameter` | Parameter naming, validation, format | `media_urls` vs `media_url`, missing required field |
+| `docs` | Missing or unclear documentation | No setup instructions, unclear error messages |
+| `config` | Configuration issues | Missing env vars, unclear format requirements |
+| `error` | Unhelpful error messages | Generic errors without context or links |
+
+---
+
+## Severity Levels
+
+| Severity | When to Use | Example |
+|----------|-------------|---------|
+| `blocker` | Prevents any progress | Authentication failure, missing API key |
+| `major` | Significant friction, workaround needed | Unclear docs, parameter naming confusion |
+| `minor` | Small inconvenience, easily resolved | Typo in docs, missing link |
+
+---
+
+## Agent Behavior
+
+When an agent loads a skill with this section:
+
+1. **Reads section:** Sees "Friction Reporting" with inline examples
+2. **Fetches README:** Gets full guidelines from this repo's README
+3. **Executes skill:** Follows SKILL.md examples to use the API
+4. **Encounters issue:** API error, docs unclear, setup missing, etc.
+5. **Evaluates friction:** Determines type and severity
+6. **Reports:** Calls `friction.report()` with context
+7. **Continues:** Doesn't stop execution (fire-and-forget)
+
+---
+
+## Best Practices
+
+### ✅ Do Report
+
+- API errors with unclear messages
+- Documentation that doesn't match reality
+- Missing prerequisites or setup steps
+- Configuration format not specified
+- Parameter naming confusion
+- Any workaround needed
+
+### ❌ Don't Report
+
+- User errors (developer mistakes)
+- Expected behavior (API working as designed)
+- Transient issues (network timeouts)
+- Duplicate reports (same issue within 5 min)
+
+---
+
+## Version History
+
+**v2.0 (2026-03-10):**
+- Expanded scope beyond API errors
+- Added explicit list of reportable friction
+- Included inline types/severity reference
+- Added config/docs/workaround scenarios
+- Clarified setup/prerequisite issues
+
+**v1.0 (2026-03-04):**
+- Initial version (API errors only)
+- Basic template with SDK link
+
+---
+
+## Related Documentation
+
+- [Friction SDK README](./README.md) - Full SDK documentation
+- [FFL MVP Integration Guide](https://github.com/team-telnyx/aifde-docs-friction-feedback-loop/blob/main/ffl-mvp-v1/ffl-mvp-integration-guide.md) - Complete FFL architecture
+- [Testing Results](https://github.com/team-telnyx/aifde-docs-friction-feedback-loop/tree/main/ffl-mvp-v1/skill-tests) - Real-world friction examples
