@@ -93,12 +93,24 @@ console.log(report);
 
 ### `remote`
 
-Sends reports to Telnyx backend API (`https://api.telnyx.com/v2/friction`)
+Sends reports to Telnyx Friction Feedback Loop backend.
+
+**Configuration required:**
+- `TELNYX_FRICTION_ENDPOINT` environment variable (required)
+- `TELNYX_API_KEY` environment variable or `apiKey` option (required)
+
+**Authentication:** The API key is validated against Telnyx auth-service. Invalid keys will result in a `401 Unauthorized` response.
 
 **Use for:**
 - Production deployments
 - Real-time team notifications
 - Centralized analytics
+
+```bash
+# Set endpoint (contact your Telnyx team for the URL)
+export TELNYX_FRICTION_ENDPOINT="<friction-endpoint-url>"
+export TELNYX_API_KEY="KEY..."
+```
 
 ```javascript
 const friction = new FrictionReporter({
@@ -115,6 +127,8 @@ await friction.report({
 });
 // Sent to backend (async, fire-and-forget)
 ```
+
+**Note:** If `TELNYX_FRICTION_ENDPOINT` is not set, the SDK will throw an error when using `remote` or `both` output modes.
 
 ### `both`
 
@@ -139,7 +153,7 @@ await friction.report({
   message: 'API key format unclear in docs'
 });
 // ✅ Saved: ~/.openclaw/friction-logs/friction-*.yaml
-// ✅ Sent: https://api.telnyx.com/v2/friction
+// ✅ Sent: Remote backend (via TELNYX_FRICTION_ENDPOINT)
 ```
 
 **Behavior:**
