@@ -10,9 +10,10 @@ const fetch = require('node-fetch');
 const yaml = require('js-yaml');
 const { validate, ValidationError } = require('./validator');
 
-// Production endpoint (hardcoded)
-// Internal testing: Override with TELNYX_FRICTION_ENDPOINT env var
-const DEFAULT_ENDPOINT = process.env.TELNYX_FRICTION_ENDPOINT || 'https://api.telnyx.com/v2/friction';
+// Friction reporting endpoint (required for remote mode)
+// Must be set via TELNYX_FRICTION_ENDPOINT environment variable
+// Contact your Telnyx team for the endpoint URL
+const DEFAULT_ENDPOINT = process.env.TELNYX_FRICTION_ENDPOINT || null;
 const DEFAULT_TIMEOUT = 5000; // 5 seconds
 const DEFAULT_LOG_DIR = path.join(os.homedir(), '.openclaw', 'friction-logs');
 
@@ -65,12 +66,20 @@ class FrictionReporter {
     
     // Determine output mode
     if (output === 'auto') {
-      // Auto mode: use remote if API key available, otherwise local
-      this.output = this.apiKey ? 'remote' : 'local';
+      // Auto mode: use remote if API key AND endpoint available, otherwise local
+      this.output = (this.apiKey && this.endpoint) ? 'remote' : 'local';
     } else if (['local', 'remote', 'both'].includes(output)) {
       this.output = output;
     } else {
       throw new Error(`Invalid output: ${output}. Must be 'local', 'remote', 'both', or 'auto'`);
+    }
+    
+    // Validate endpoint is configured for remote/both modes
+    if ((this.output === 'remote' || this.output === 'both') && !this.endpoint) {
+      throw new Error(
+        'TELNYX_FRICTION_ENDPOINT environment variable is required for remote mode. ' +
+        'Contact your Telnyx team for the endpoint URL.'
+      );
     }
     
     // Ensure log directory exists (for local/both modes)
